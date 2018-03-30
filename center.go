@@ -6,6 +6,7 @@ import (
 	"time"
 	"strings"
 	"encoding/json"
+	"fmt"
 )
 
 // read data from consul kv and watch it
@@ -35,12 +36,17 @@ func ConsulKV(config CenterConfig) *consulapi.KV {
 	return kv
 }
 
-func KVGet(key string, kv *consulapi.KV)([]byte,uint64){
+
+func KVGet(key string, kv *consulapi.KV)([]byte,uint64,error){
 	pair,meta,err := kv.Get(key,nil)
 	if err != nil {
-		log.Panicln("Error read from KV", err.Error(), err)
+		log.Fatal(err)
 	}
-	return pair.Value,meta.LastIndex
+	if pair == nil {
+		fmt.Println("Frist GeT Nil from center,Your key is:", key)
+		return nil,uint64(0),nil
+	}
+	return pair.Value,meta.LastIndex,err
 }
 
 func WatchKey(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64) {
@@ -51,6 +57,7 @@ func WatchKey(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64) {
 			WaitIndex: currentIndex,
 		})
 		if err != nil {
+			fmt.Println("Error:",err)
 			log.Panicln("Error read from KV", err.Error(), err)
 		}
 
@@ -65,6 +72,7 @@ func WatchKey(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64) {
 	}
 }
 
+
 func (p *Pan) ReadCenterWithWatch()  {
 
 	kv := ConsulKV(p.CenterConfig)
@@ -73,19 +81,22 @@ func (p *Pan) ReadCenterWithWatch()  {
 	centerMap := make(map[string]interface{})
 
 	//first get key from center
-	data,i1 := KVGet(key,kv)
-	json.Unmarshal(data, &centerMap)
-	p.center = UpMapKey(&centerMap)
+	data,i1,err := KVGet(key,kv)
+	if err != nil{
+		fmt.Println("error when get key :",err)
+	}else {
+		json.Unmarshal(data, &centerMap)
+		p.center = UpMapKey(&centerMap)
+		// watch
 
-	// watch
-	go WatchKey(key,ch,kv,i1)
-	go func() {
-		for data := range ch {
-			json.Unmarshal(data, &centerMap)
-			p.center = UpMapKey(&centerMap)
-		}
-	}()
-
+		go WatchKey(key,ch,kv,i1)
+		go func() {
+			for data := range ch {
+				json.Unmarshal(data, &centerMap)
+				p.center = UpMapKey(&centerMap)
+			}
+		}()
+	}
 
 }
 

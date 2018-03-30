@@ -127,9 +127,25 @@ func (p *Pan) Get(key string) interface{}  {
 			return cast.ToFloat64(res)
 		case float32:
 			return cast.ToFloat32(res)
+		case bool:
+			return cast.ToBool(res)
+		case []string:
+			return cast.ToStringSlice(res)
+
 		}
 	}
 	return res
+}
+
+// get string value
+func (p *Pan) GetStr(key string) string  {
+	return cast.ToString(p.Get(key))
+}
+
+// get string slice
+
+func (p *Pan) GetStrSlice(key string)[]string  {
+	return cast.ToStringSlice(p.Get(key))
 }
 
 // env
@@ -172,7 +188,7 @@ func (p *Pan) searchMap(source map[string]interface{}, path []string) interface{
 		return source
 	}
 	next,ok := source[path[0]]
-	
+
 	if ok {
 		// fast path
 		if len(path) == 1 {
@@ -183,10 +199,7 @@ func (p *Pan) searchMap(source map[string]interface{}, path []string) interface{
 
 		switch next.(type) {
 		case map[string]interface{}:
-			fmt.Println("the Map:",next.(map[string]interface{}))
-
 			newNext := cast.ToStringMap(next)
-			fmt.Println("New next:",next)
 			return p.searchMap(UpMapKey(&newNext), path[1:])
 		default:
 			fmt.Println(next)
@@ -210,11 +223,14 @@ func (p *Pan) find(key string) interface{}  {
 		path = strings.Split(key, p.keyDelim)
 		//nested = len(path) > 1
 		)
-
-	fmt.Println("path:" ,path)
 	// override
 
 	val = p.searchMap(p.override,path)
+	if val != nil{
+		return val
+	}
+	//env
+	val = p.searchMap(p.env,path)
 	if val != nil{
 		return val
 	}
@@ -224,11 +240,7 @@ func (p *Pan) find(key string) interface{}  {
 	if val != nil{
 		return val
 	}
-	//env
-	val = p.searchMap(p.env,path)
-	if val != nil{
-		return val
-	}
+
 	// config
 	val = p.searchMap(p.config,path)
 	if val != nil{
