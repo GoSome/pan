@@ -77,8 +77,6 @@ func WatchKeyWithInterval(key string, ch chan []byte, kv *consulapi.KV, keyIndex
 	currentIndex := keyIndex
 	for {
 		pair, meta, err := kv.Get(key,nil)
-		fmt.Println("meta index:",meta.LastIndex) //todo del
-
 		if err != nil {
 			fmt.Println("Error for get key,I will sleep another 2 mins:",err)
 			time.Sleep(2 * time.Minute)
@@ -88,7 +86,6 @@ func WatchKeyWithInterval(key string, ch chan []byte, kv *consulapi.KV, keyIndex
 			// Query won't be blocked if key not found
 			//time.Sleep(1 * time.Second)
 		} else if meta.LastIndex != currentIndex {
-			fmt.Println("change",meta.LastIndex) //todo del
 			ch <- pair.Value
 			currentIndex = meta.LastIndex
 		}
