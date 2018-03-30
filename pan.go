@@ -7,6 +7,7 @@ import (
 	"strings"
 	"os"
 	"github.com/spf13/cast"
+	"time"
 )
 
 // thank you for viper by spf13
@@ -58,10 +59,11 @@ func New() *Pan  {
 	p.typeByDefValue = true
 	// set for Eigen
 	//p.CenterConfig.Address = "consul.aidigger.com:8500"
-	p.CenterConfig.Address = "192.168.3.14:8500"
+	p.CenterConfig.Address = "consul.aidigger.com:8500"
 	p.CenterConfig.Scheme = "http"
 	p.CenterConfig.Namespace = "debug"
 	p.CenterConfig.NamespaceMap = "/Configs/{namespace}/{key}"
+	p.CenterConfig.Interval = 60 * time.Second
 
 	return p
 }

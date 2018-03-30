@@ -21,6 +21,7 @@ type CenterConfig struct {
 	Key 				string
 	keyIndex 			uint64
 	watch 				bool   //default watch  true
+	Interval 			time.Duration
 
 }
 
@@ -57,13 +58,14 @@ func WatchKey(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64) {
 			WaitIndex: currentIndex,
 		})
 		if err != nil {
-			fmt.Println("Error:",err)
-			log.Panicln("Error read from KV", err.Error(), err)
+			fmt.Println("Error for get key,I will sleep 2 mins:",err)
+			time.Sleep(2 * time.Minute)
+
 		}
 
 		if pair == nil || meta == nil {
 			// Query won't be blocked if key not found
-			time.Sleep(3 * time.Second)
+			//time.Sleep(1 * time.Second)
 		} else {
 			ch <- pair.Value
 			currentIndex = meta.LastIndex
@@ -71,7 +73,29 @@ func WatchKey(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64) {
 
 	}
 }
+func WatchKeyWithInterval(key string, ch chan []byte, kv *consulapi.KV, keyIndex uint64, interval time.Duration) {
+	currentIndex := keyIndex
+	for {
+		pair, meta, err := kv.Get(key,nil)
+		fmt.Println("meta index:",meta.LastIndex) //todo del
 
+		if err != nil {
+			fmt.Println("Error for get key,I will sleep another 2 mins:",err)
+			time.Sleep(2 * time.Minute)
+		}
+
+		if pair == nil || meta == nil {
+			// Query won't be blocked if key not found
+			//time.Sleep(1 * time.Second)
+		} else if meta.LastIndex != currentIndex {
+			fmt.Println("change",meta.LastIndex) //todo del
+			ch <- pair.Value
+			currentIndex = meta.LastIndex
+		}
+		time.Sleep(interval)
+
+	}
+}
 
 func (p *Pan) ReadCenterWithWatch()  {
 
@@ -89,7 +113,7 @@ func (p *Pan) ReadCenterWithWatch()  {
 		p.center = UpMapKey(&centerMap)
 		// watch
 
-		go WatchKey(key,ch,kv,i1)
+		go WatchKeyWithInterval(key, ch, kv, i1, p.CenterConfig.Interval)
 		go func() {
 			for data := range ch {
 				json.Unmarshal(data, &centerMap)
