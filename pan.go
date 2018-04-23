@@ -149,6 +149,15 @@ func (p *Pan) GetStr(key string) string  {
 func (p *Pan) GetStrSlice(key string)[]string  {
 	return cast.ToStringSlice(p.Get(key))
 }
+// get int
+func (p Pan) GetInt(key string) int  {
+	return cast.ToInt(p.Get(key))
+}
+
+//get bool
+func (p Pan) GetBool(key string) int  {
+	return cast.ToBool(p.Get(key))
+}
 
 // env
 
